@@ -5,29 +5,70 @@ using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
+    public PlayerNo playerNo;
+
     public int speed;
-    public Text interactTxt;
+    public int throwForce;
     public GameObject hand;
 
-    private Item myItem;
+    public Text healthTxt;
+    public Text ETxt;
+    public Text FTxt;
+
+    private Item item;
+    private Desk desk;
+
+    private Collider[] cols;
+    private Rigidbody[] rigidbodies;
+    private Quaternion[] rotations;
+    private Vector3[] positions;
+
+    private int health = 100;
     private bool isDashing;
+
+    public enum PlayerNo
+    {
+        player_1,
+        player_2
+    }
 
     void Start()
     {
-        interactTxt.gameObject.SetActive(false);
+        ETxt.gameObject.SetActive(false);
+        FTxt.gameObject.SetActive(false);
+
+        cols = GetComponentsInChildren<Collider>();
+        rigidbodies = GetComponentsInChildren<Rigidbody>();
+        rotations = new Quaternion[rigidbodies.Length];
+        positions = new Vector3[rigidbodies.Length];
     }
     void Update()
     {
         Move();
+        CarryItem();
+        RepairItem();
+        ThrowItem();
+        RepairSelf();
+        //Dash();
 
-        Dash();
-
-        interactTxt.transform.position = Camera.main.WorldToScreenPoint(transform.position);
+        Txt();
     }
     void Move()
     {
-        var lh = Input.GetAxis("Horizontal");
-        var lv = Input.GetAxis("Vertical");
+        float lh;
+        float lv;
+
+        if (playerNo == PlayerNo.player_1)
+        {
+            lh = Input.GetAxis("Horizontal");
+            lv = Input.GetAxis("Vertical");
+        }
+        else
+        {
+            lh = Input.GetAxis("Horizontal 2");
+            lv = Input.GetAxis("Vertical 2");
+        }
+
         var movement = new Vector3(lh * speed * Time.deltaTime, 0, lv * speed * Time.deltaTime);
         transform.position += movement;
 
@@ -42,41 +83,151 @@ public class Player : MonoBehaviour
         if (isDashing == true)
             transform.position += Vector3.forward;
     }
-    void OnTriggerStay(Collider other)
+    void CarryItem()
     {
-        if (other.gameObject.tag == "Desk" || other.gameObject.tag == "Item")
-            interactTxt.gameObject.SetActive(true);
-
-        if (Input.GetKeyDown(KeyCode.E))
+        if (item != null)
         {
-            if (other.gameObject.tag == "Desk")
+            if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.E)) ||
+                (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick1Button0)))
             {
-                if (myItem != null)
+                if (item.isCarrying == false)
                 {
-                    myItem.pos = other.gameObject.GetComponent<Desk>().top;
-                    //myItem = null;
-                }
-            }
+                    item.myPlayer = this;
+                    item.isCarrying = true;
 
-            if (other.gameObject.tag == "Item")
-            {
-                if (myItem == null)
-                {
-                    myItem = other.gameObject.GetComponent<Item>();
-                    myItem.pos = hand;
+                    if (desk != null)
+                        desk.myItem = null;
                 }
                 else
                 {
-                    if (myItem.pos == hand)
-                        myItem.pos = null;
-                    myItem = null;
+                    item.myPlayer = null;
+                    item.isCarrying = false;
+
+                    if (desk != null)
+                    {
+                        item.transform.position = desk.top.transform.position;
+                        desk.myItem = item;
+                    }
                 }
             }
         }
     }
+    void RepairItem()
+    {
+        if (desk != null && desk.myItem != null)
+        {
+            if ((playerNo == PlayerNo.player_1 && Input.GetKey(KeyCode.F)) ||
+                (playerNo == PlayerNo.player_2 && Input.GetKey(KeyCode.Joystick1Button1)))
+            {
+                if (desk.myItem.gameObject == desk.correctItem)
+                {
+                    desk.myItem.repairPercent++;
+                }
+            }
+        }
+    }
+    void ThrowItem()
+    {
+        if (item != null && item.isCarrying)
+            if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.R)) ||
+                (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick1Button2)))
+            {
+                item.myPlayer = null;
+                item.isCarrying = false;
+                item.GetComponent<Rigidbody>().AddForce(transform.forward * throwForce);
+                item.isThrowing = true;
+            }
+    }
+    void RepairSelf()
+    {
+        if (health < 100)
+        {
+            if (Input.GetKey(KeyCode.F))
+            {
+                health++;
+                if (health == 100)
+                    HealthState(true);
+            }
+        }
+    }
+    void Txt()
+    {
+        if (item != null)
+        {
+            if (item.isCarrying == false || desk != null)
+                ETxt.gameObject.SetActive(true);
+            else
+                ETxt.gameObject.SetActive(false);
+        }
+        else
+            ETxt.gameObject.SetActive(false);
+
+        if (desk != null)
+        {
+            if (desk.myItem != null)
+                FTxt.gameObject.SetActive(true);
+            else
+                FTxt.gameObject.SetActive(false);
+        }
+        else
+            FTxt.gameObject.SetActive(false);
+
+        if (health < 100)
+            FTxt.gameObject.SetActive(true);
+
+        healthTxt.text = health + "";
+
+        ETxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y, transform.position.z));
+        FTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y, transform.position.z));
+        healthTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y, transform.position.z));
+    }
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.tag == "Desk")
+            desk = other.gameObject.GetComponent<Desk>();
+
+        if (other.gameObject.tag == "Item")
+            item = other.gameObject.GetComponent<Item>();
+    }
     void OnTriggerExit(Collider other)
     {
-        if (other.gameObject.tag == "Item" || other.gameObject.tag == "Desk")
-            interactTxt.gameObject.SetActive(false);
+        if (other.gameObject.tag == "Desk")
+            desk = null;
+
+        if (other.gameObject.tag == "Item")
+            item = null;
+    }
+    void OnCollisionEnter(Collision col)
+    {
+        if (col.gameObject.tag == "Item")
+        {
+            if (col.gameObject.GetComponent<Item>().isThrowing == true)
+            {
+                HealthState(false);
+                health = 0;
+            }
+        }
+    }
+    void HealthState(bool isHealthy)
+    {
+        rigidbodies[0].isKinematic = !isHealthy;
+        cols[0].enabled = isHealthy;
+
+        for (int i = 1; i < rigidbodies.Length; i++)
+        {
+            if (isHealthy)
+            {
+                rigidbodies[i].gameObject.transform.position = positions[i];
+                rigidbodies[i].gameObject.transform.rotation = rotations[i];
+            }
+            else
+            {
+                rotations[i] = rigidbodies[i].gameObject.transform.rotation;
+                positions[i] = rigidbodies[i].gameObject.transform.position;
+            }
+
+            rigidbodies[i].isKinematic = isHealthy;
+            cols[i].enabled = !isHealthy;
+        }
     }
 }
