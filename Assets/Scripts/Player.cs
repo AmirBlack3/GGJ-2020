@@ -55,25 +55,28 @@ public class Player : MonoBehaviour
     }
     void Move()
     {
-        float lh;
-        float lv;
-
-        if (playerNo == PlayerNo.player_1)
+        if (health == 100)
         {
-            lh = Input.GetAxis("Horizontal");
-            lv = Input.GetAxis("Vertical");
-        }
-        else
-        {
-            lh = Input.GetAxis("Horizontal 2");
-            lv = Input.GetAxis("Vertical 2");
-        }
+            float lh = 0;
+            float lv = 0;
 
-        var movement = new Vector3(lh * speed * Time.deltaTime, 0, lv * speed * Time.deltaTime);
-        transform.position += movement;
+            if (playerNo == PlayerNo.player_1)
+            {
+                lh = Input.GetAxis("Horizontal 1");
+                lv = Input.GetAxis("Vertical 1");
+            }
+            else if(playerNo == PlayerNo.player_2)
+            {
+                lh = Input.GetAxis("Horizontal 2");
+                lv = Input.GetAxis("Vertical 2");
+            }
 
-        if (movement != Vector3.zero)
-            transform.rotation = Quaternion.LookRotation(movement);
+            var movement = new Vector3(lh * speed * Time.deltaTime, 0, lv * speed * Time.deltaTime);
+            transform.position += movement;
+
+            if (movement != Vector3.zero)
+                transform.rotation = Quaternion.LookRotation(movement);
+        }
     }
     void Dash()
     {
@@ -85,28 +88,31 @@ public class Player : MonoBehaviour
     }
     void CarryItem()
     {
-        if (item != null)
+        if (health == 100)
         {
-            if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.E)) ||
-                (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick1Button0)))
+            if (item != null)
             {
-                if (item.isCarrying == false)
+                if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.Joystick1Button0)) ||
+                    (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick2Button0)))
                 {
-                    item.myPlayer = this;
-                    item.isCarrying = true;
-
-                    if (desk != null)
-                        desk.myItem = null;
-                }
-                else
-                {
-                    item.myPlayer = null;
-                    item.isCarrying = false;
-
-                    if (desk != null)
+                    if (item.isCarrying == false)
                     {
-                        item.transform.position = desk.top.transform.position;
-                        desk.myItem = item;
+                        item.myPlayer = this;
+                        item.isCarrying = true;
+
+                        if (desk != null)
+                            desk.myItem = null;
+                    }
+                    else
+                    {
+                        item.myPlayer = null;
+                        item.isCarrying = false;
+
+                        if (desk != null)
+                        {
+                            item.transform.position = desk.top.transform.position;
+                            desk.myItem = item;
+                        }
                     }
                 }
             }
@@ -114,29 +120,35 @@ public class Player : MonoBehaviour
     }
     void RepairItem()
     {
-        if (desk != null && desk.myItem != null)
+        if (health == 100)
         {
-            if ((playerNo == PlayerNo.player_1 && Input.GetKey(KeyCode.F)) ||
-                (playerNo == PlayerNo.player_2 && Input.GetKey(KeyCode.Joystick1Button1)))
+            if (desk != null && desk.myItem != null)
             {
-                if (desk.myItem.gameObject == desk.correctItem)
+                if ((playerNo == PlayerNo.player_1 && Input.GetKey(KeyCode.Joystick1Button1)) ||
+                    (playerNo == PlayerNo.player_2 && Input.GetKey(KeyCode.Joystick2Button1)))
                 {
-                    desk.myItem.repairPercent++;
+                    if (desk.myItem.gameObject == desk.correctItem)
+                    {
+                        desk.myItem.repairPercent++;
+                    }
                 }
             }
         }
     }
     void ThrowItem()
     {
-        if (item != null && item.isCarrying)
-            if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.R)) ||
-                (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick1Button2)))
-            {
-                item.myPlayer = null;
-                item.isCarrying = false;
-                item.GetComponent<Rigidbody>().AddForce(transform.forward * throwForce);
-                item.isThrowing = true;
-            }
+        if (health == 100)
+        {
+            if (item != null && item.isCarrying)
+                if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.Joystick1Button2)) ||
+                    (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick2Button2)))
+                {
+                    item.myPlayer = null;
+                    item.isCarrying = false;
+                    item.GetComponent<Rigidbody>().AddForce(transform.forward * throwForce);
+                    item.isThrowing = true;
+                }
+        }
     }
     void RepairSelf()
     {
@@ -152,28 +164,30 @@ public class Player : MonoBehaviour
     }
     void Txt()
     {
-        if (item != null)
+        if (health < 100)
+            FTxt.gameObject.SetActive(true);
+        else
         {
-            if (item.isCarrying == false || desk != null)
-                ETxt.gameObject.SetActive(true);
+            if (item != null)
+            {
+                if (item.isCarrying == false || desk != null)
+                    ETxt.gameObject.SetActive(true);
+                else
+                    ETxt.gameObject.SetActive(false);
+            }
             else
                 ETxt.gameObject.SetActive(false);
-        }
-        else
-            ETxt.gameObject.SetActive(false);
 
-        if (desk != null)
-        {
-            if (desk.myItem != null)
-                FTxt.gameObject.SetActive(true);
+            if (desk != null)
+            {
+                if (desk.myItem != null)
+                    FTxt.gameObject.SetActive(true);
+                else
+                    FTxt.gameObject.SetActive(false);
+            }
             else
                 FTxt.gameObject.SetActive(false);
         }
-        else
-            FTxt.gameObject.SetActive(false);
-
-        if (health < 100)
-            FTxt.gameObject.SetActive(true);
 
         healthTxt.text = health + "";
 
