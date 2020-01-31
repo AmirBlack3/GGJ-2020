@@ -12,11 +12,14 @@ public class Player : MonoBehaviour
     public GameObject hand;
 
     public Text healthTxt;
-    public Text ETxt;
-    public Text FTxt;
+    public Text ATxt;
+    public Text BTxt;
+    public Text XTxt;
+    public Text YTxt;
 
     private Item item;
     private Desk desk;
+    private Item myItem;
 
     private Collider[] cols;
     private Rigidbody[] rigidbodies;
@@ -34,8 +37,10 @@ public class Player : MonoBehaviour
 
     void Start()
     {
-        ETxt.gameObject.SetActive(false);
-        FTxt.gameObject.SetActive(false);
+        ATxt.gameObject.SetActive(false);
+        BTxt.gameObject.SetActive(false);
+        XTxt.gameObject.SetActive(false);
+        YTxt.gameObject.SetActive(false);
 
         cols = GetComponentsInChildren<Collider>();
         rigidbodies = GetComponentsInChildren<Rigidbody>();
@@ -97,6 +102,7 @@ public class Player : MonoBehaviour
                 {
                     if (item.isCarrying == false)
                     {
+                        myItem = item;
                         item.myPlayer = this;
                         item.isCarrying = true;
 
@@ -105,6 +111,7 @@ public class Player : MonoBehaviour
                     }
                     else
                     {
+                        myItem = null;
                         item.myPlayer = null;
                         item.isCarrying = false;
 
@@ -127,9 +134,16 @@ public class Player : MonoBehaviour
                 if ((playerNo == PlayerNo.player_1 && Input.GetKey(KeyCode.Joystick1Button1)) ||
                     (playerNo == PlayerNo.player_2 && Input.GetKey(KeyCode.Joystick2Button1)))
                 {
-                    if (desk.myItem.gameObject == desk.correctItem)
+                    if (desk.myItem.type[desk.myItem.typeIndex] == desk.correctItemType)
                     {
-                        desk.myItem.repairPercent++;
+                        if (desk.myItem.repairPercent < 100)
+                            desk.myItem.repairPercent++;
+                        else
+                        {
+                            desk.myItem.repairPercent = 0;
+                            desk.myItem.typeIndex++;
+                        }
+
                     }
                 }
             }
@@ -143,6 +157,7 @@ public class Player : MonoBehaviour
                 if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.Joystick1Button2)) ||
                     (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick2Button2)))
                 {
+                    myItem = null;
                     item.myPlayer = null;
                     item.isCarrying = false;
                     item.GetComponent<Rigidbody>().AddForce(transform.forward * throwForce);
@@ -154,7 +169,8 @@ public class Player : MonoBehaviour
     {
         if (health < 100)
         {
-            if (Input.GetKey(KeyCode.F))
+            if ((playerNo == PlayerNo.player_1 && Input.GetKey(KeyCode.Joystick1Button3)) ||
+                (playerNo == PlayerNo.player_2 && Input.GetKey(KeyCode.Joystick2Button3)))
             {
                 health++;
                 if (health == 100)
@@ -164,35 +180,55 @@ public class Player : MonoBehaviour
     }
     void Txt()
     {
-        if (health < 100)
-            FTxt.gameObject.SetActive(true);
+        if (item == null || health < 100)
+        {
+            ATxt.gameObject.SetActive(false);
+            BTxt.gameObject.SetActive(false);
+            XTxt.gameObject.SetActive(false);
+        }
         else
         {
-            if (item != null)
+            if (desk == null)
             {
-                if (item.isCarrying == false || desk != null)
-                    ETxt.gameObject.SetActive(true);
+                if (myItem == null)
+                {
+                    ATxt.gameObject.SetActive(true);
+                    XTxt.gameObject.SetActive(false);
+                }
                 else
-                    ETxt.gameObject.SetActive(false);
+                {
+                    ATxt.gameObject.SetActive(false);
+                    XTxt.gameObject.SetActive(true);
+                }
             }
             else
-                ETxt.gameObject.SetActive(false);
+            {
+                XTxt.gameObject.SetActive(false);
 
-            if (desk != null)
-            {
-                if (desk.myItem != null)
-                    FTxt.gameObject.SetActive(true);
+                if (desk.myItem != null && desk.myItem.type[desk.myItem.typeIndex] == desk.correctItemType)
+                {
+                    ATxt.gameObject.SetActive(false);
+                    BTxt.gameObject.SetActive(true);
+                }
                 else
-                    FTxt.gameObject.SetActive(false);
+                {
+                    ATxt.gameObject.SetActive(true);
+                    BTxt.gameObject.SetActive(false);
+                }
             }
-            else
-                FTxt.gameObject.SetActive(false);
         }
+
+        if (health < 100)
+            YTxt.gameObject.SetActive(true);
+        else
+            YTxt.gameObject.SetActive(false);
 
         healthTxt.text = health + "";
 
-        ETxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y, transform.position.z));
-        FTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y, transform.position.z));
+        ATxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y+7, transform.position.z));
+        BTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y+7, transform.position.z));
+        XTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y+7, transform.position.z));
+        YTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y+7, transform.position.z));
         healthTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y, transform.position.z));
     }
     void OnTriggerEnter(Collider other)
@@ -215,10 +251,12 @@ public class Player : MonoBehaviour
     {
         if (col.gameObject.tag == "Item")
         {
-            if (col.gameObject.GetComponent<Item>().isThrowing == true)
+            var i = col.gameObject.GetComponent<Item>();
+            if (i.isThrowing == true)
             {
                 HealthState(false);
                 health = 0;
+                i.isThrowing = false;
             }
         }
     }

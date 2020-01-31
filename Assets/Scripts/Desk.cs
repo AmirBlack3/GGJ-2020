@@ -5,7 +5,7 @@ using UnityEngine;
 public class Desk : MonoBehaviour
 {
     public GameObject top;
-    public GameObject correctItem;
+    public Item.ItemType correctItemType;
 
     public Item myItem { get; set; }
 }
