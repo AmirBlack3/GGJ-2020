@@ -19,6 +19,7 @@ public class Player : MonoBehaviour
 
     private Item item;
     private Desk desk;
+    private Player player;
     private Item myItem;
 
     private Collider[] cols;
@@ -53,7 +54,8 @@ public class Player : MonoBehaviour
         CarryItem();
         RepairItem();
         ThrowItem();
-        RepairSelf();
+        RepairBot(this);
+        RepairBot(player);
         //Dash();
 
         Txt();
@@ -74,6 +76,11 @@ public class Player : MonoBehaviour
             {
                 lh = Input.GetAxis("Horizontal 2");
                 lv = Input.GetAxis("Vertical 2");
+
+                if (lh == 0)
+                    lh = Input.GetAxis("Horizontal");
+                if (lv == 0)
+                    lv = Input.GetAxis("Vertical");
             }
 
             var movement = new Vector3(lh * speed * Time.deltaTime, 0, lv * speed * Time.deltaTime);
@@ -98,28 +105,31 @@ public class Player : MonoBehaviour
             if (item != null)
             {
                 if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.Joystick1Button0)) ||
-                    (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick2Button0)))
+                    (playerNo == PlayerNo.player_2 && (Input.GetKeyDown(KeyCode.Joystick2Button0) || Input.GetKeyDown(KeyCode.C))))
                 {
-                    if (item.isCarrying == false)
+                    if (myItem == null)
                     {
-                        myItem = item;
-                        item.myPlayer = this;
-                        item.isCarrying = true;
+                        if (item.isCarrying == false)
+                        {
+                            myItem = item;
+                            myItem.myPlayer = this;
+                            myItem.isCarrying = true;
 
-                        if (desk != null)
-                            desk.myItem = null;
+                            if (desk != null)
+                                desk.myItem = null;
+                        }
                     }
                     else
                     {
-                        myItem = null;
-                        item.myPlayer = null;
-                        item.isCarrying = false;
+                        myItem.myPlayer = null;
+                        myItem.isCarrying = false;
 
                         if (desk != null)
                         {
-                            item.transform.position = desk.top.transform.position;
-                            desk.myItem = item;
+                            myItem.transform.position = desk.top.transform.position;
+                            desk.myItem = myItem;
                         }
+                        myItem = null;
                     }
                 }
             }
@@ -132,18 +142,25 @@ public class Player : MonoBehaviour
             if (desk != null && desk.myItem != null)
             {
                 if ((playerNo == PlayerNo.player_1 && Input.GetKey(KeyCode.Joystick1Button1)) ||
-                    (playerNo == PlayerNo.player_2 && Input.GetKey(KeyCode.Joystick2Button1)))
+                    (playerNo == PlayerNo.player_2 && (Input.GetKey(KeyCode.Joystick2Button1)) || Input.GetKeyDown(KeyCode.F)))
                 {
-                    if (desk.myItem.type[desk.myItem.typeIndex] == desk.correctItemType)
+                    if (desk.myItem.types[desk.myItem.typeIndex] == desk.correctItemType)
                     {
                         if (desk.myItem.repairPercent < 100)
                             desk.myItem.repairPercent++;
                         else
                         {
-                            desk.myItem.repairPercent = 0;
-                            desk.myItem.typeIndex++;
+                            if (desk.myItem.typeIndex < desk.myItem.types.Length - 1)
+                            {
+                                desk.myItem.repairPercent = 0;
+                                desk.myItem.typeIndex++;
+                            }
+                            else
+                            {
+                                desk.GetComponent<MeshRenderer>().material = GameManager.instance.greenMat;
+                                Destroy(desk.myItem.gameObject);
+                            }
                         }
-
                     }
                 }
             }
@@ -153,34 +170,37 @@ public class Player : MonoBehaviour
     {
         if (health == 100)
         {
-            if (item != null && item.isCarrying)
+            if (myItem != null && myItem.isCarrying)
                 if ((playerNo == PlayerNo.player_1 && Input.GetKeyDown(KeyCode.Joystick1Button2)) ||
-                    (playerNo == PlayerNo.player_2 && Input.GetKeyDown(KeyCode.Joystick2Button2)))
+                    (playerNo == PlayerNo.player_2 && (Input.GetKeyDown(KeyCode.Joystick2Button2) || Input.GetKeyDown(KeyCode.E))))
                 {
+                    myItem.myPlayer = null;
+                    myItem.isCarrying = false;
+                    myItem.GetComponent<Rigidbody>().AddForce(transform.forward * throwForce);
+                    myItem.isThrowing = true;
                     myItem = null;
-                    item.myPlayer = null;
-                    item.isCarrying = false;
-                    item.GetComponent<Rigidbody>().AddForce(transform.forward * throwForce);
-                    item.isThrowing = true;
                 }
         }
     }
-    void RepairSelf()
+    void RepairBot(Player p)
     {
-        if (health < 100)
+        if (p != null)
         {
-            if ((playerNo == PlayerNo.player_1 && Input.GetKey(KeyCode.Joystick1Button3)) ||
-                (playerNo == PlayerNo.player_2 && Input.GetKey(KeyCode.Joystick2Button3)))
+            if (p.health < 100)
             {
-                health++;
-                if (health == 100)
-                    HealthState(true);
+                if ((playerNo == PlayerNo.player_1 && Input.GetKey(KeyCode.Joystick1Button3)) ||
+                    (playerNo == PlayerNo.player_2 && Input.GetKey(KeyCode.Joystick2Button3)))
+                {
+                    p.health++;
+                    if (p.health == 100)
+                        p.HealthState(true);
+                }
             }
         }
     }
     void Txt()
     {
-        if (item == null || health < 100)
+        if (item == null || health < 100 || (player != null && player.health < 100))
         {
             ATxt.gameObject.SetActive(false);
             BTxt.gameObject.SetActive(false);
@@ -192,8 +212,11 @@ public class Player : MonoBehaviour
             {
                 if (myItem == null)
                 {
-                    ATxt.gameObject.SetActive(true);
-                    XTxt.gameObject.SetActive(false);
+                    if (item.isCarrying == false)
+                    {
+                        ATxt.gameObject.SetActive(true);
+                        XTxt.gameObject.SetActive(false);
+                    }
                 }
                 else
                 {
@@ -205,7 +228,7 @@ public class Player : MonoBehaviour
             {
                 XTxt.gameObject.SetActive(false);
 
-                if (desk.myItem != null && desk.myItem.type[desk.myItem.typeIndex] == desk.correctItemType)
+                if (desk.myItem != null && desk.myItem.types[desk.myItem.typeIndex] == desk.correctItemType)
                 {
                     ATxt.gameObject.SetActive(false);
                     BTxt.gameObject.SetActive(true);
@@ -217,8 +240,8 @@ public class Player : MonoBehaviour
                 }
             }
         }
-
-        if (health < 100)
+        
+        if (health < 100 || (player != null && player.health < 100))
             YTxt.gameObject.SetActive(true);
         else
             YTxt.gameObject.SetActive(false);
@@ -231,13 +254,16 @@ public class Player : MonoBehaviour
         YTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y+7, transform.position.z));
         healthTxt.transform.position = Camera.main.WorldToScreenPoint(new Vector3(transform.position.x, transform.position.y, transform.position.z));
     }
-    void OnTriggerEnter(Collider other)
+    void OnTriggerStay(Collider other)
     {
         if (other.gameObject.tag == "Desk")
             desk = other.gameObject.GetComponent<Desk>();
 
         if (other.gameObject.tag == "Item")
             item = other.gameObject.GetComponent<Item>();
+
+        if (other.gameObject.tag == "Player")
+            player = other.gameObject.GetComponent<Player>();
     }
     void OnTriggerExit(Collider other)
     {
@@ -246,6 +272,9 @@ public class Player : MonoBehaviour
 
         if (other.gameObject.tag == "Item")
             item = null;
+
+        if (other.gameObject.tag == "Player")
+            player = null;
     }
     void OnCollisionEnter(Collision col)
     {
@@ -263,7 +292,7 @@ public class Player : MonoBehaviour
     void HealthState(bool isHealthy)
     {
         rigidbodies[0].isKinematic = !isHealthy;
-        cols[0].enabled = isHealthy;
+        cols[0].isTrigger = !isHealthy;
 
         for (int i = 1; i < rigidbodies.Length; i++)
         {

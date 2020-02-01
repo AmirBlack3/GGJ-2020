@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class Item : MonoBehaviour
 {
-    public ItemType[] type;
+    public ItemType[] types;
     public Text repairTxt;
 
     public Player myPlayer { get; set; }
@@ -17,19 +17,27 @@ public class Item : MonoBehaviour
     public bool isThrowing { get; set; }
 
     private Rigidbody myRigidbody;
-    private MeshRenderer myMeshRenderer;
+    private MeshFilter myMeshFilter;
 
     public enum ItemType
     {
-        item_1,
-        item_2,
-        item_3
+        salem,
+        jush,
+        chakosh,
+        areh,
+        //jush_areh,
+        //jush_chakosh,
+
+        gear_salem,
+        gear_bokhar,
+        gear_chakosh,
+        //gear_chakosh_bokhar
     }
 
     void Start()
     {
         myRigidbody = GetComponent<Rigidbody>();
-        myMeshRenderer = GetComponent<MeshRenderer>();
+        myMeshFilter = GetComponent<MeshFilter>();
     }
     void Update()
     {
@@ -56,7 +64,38 @@ public class Item : MonoBehaviour
     }
     void Shape()
     {
-        myMeshRenderer.material = GameManager.instance.itemMaterials[typeIndex];
+        if (types[typeIndex] == ItemType.salem)
+        {
+            myMeshFilter.mesh = GameManager.instance.itemMeshs[0];
+        }
+        else if (types[typeIndex] == ItemType.jush)
+        {
+            if (types[typeIndex + 1] == ItemType.salem)
+                myMeshFilter.mesh = GameManager.instance.itemMeshs[1];
+            else if (types[typeIndex + 1] == ItemType.chakosh)
+                myMeshFilter.mesh = GameManager.instance.itemMeshs[4];
+        }
+        else if (types[typeIndex] == ItemType.chakosh)
+        {
+            myMeshFilter.mesh = GameManager.instance.itemMeshs[2];
+        }
+        else if (types[typeIndex] == ItemType.areh)
+        {
+            myMeshFilter.mesh = GameManager.instance.itemMeshs[3];
+        }
+
+        if (types[typeIndex] == ItemType.gear_salem)
+        {
+            myMeshFilter.mesh = GameManager.instance.itemMeshs[5];
+        }
+        else if (types[typeIndex] == ItemType.gear_bokhar)
+        {
+            myMeshFilter.mesh = GameManager.instance.itemMeshs[6];
+        }
+        else if (types[typeIndex] == ItemType.gear_chakosh)
+        {
+            myMeshFilter.mesh = GameManager.instance.itemMeshs[7];
+        }
     }
     void OnCollisionEnter(Collision col)
     {

@@ -7,7 +7,8 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
 
-    public Material[] itemMaterials;
+    public Mesh[] itemMeshs;
+    public Material greenMat;
 
     void Awake()
     {
